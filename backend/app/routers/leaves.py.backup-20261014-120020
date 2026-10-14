@@ -1,0 +1,371 @@
+
+from datetime import date, datetime
+from decimal import Decimal, ROUND_HALF_UP
+
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.orm import Session
+
+from app.db.session import get_db
+from app.core.audit import log_action
+from app.core.email_config import send_email
+from app.models.employee import Employee
+from app.models.leave import Leave
+from app.models.leave_balance import LeaveBalance
+from app.models.leave_ledger import LeaveLedger
+from app.routers.auth import get_current_user, require_roles
+from app.schemas.leave import LeaveCreate, LeaveReview, LeaveResponse
+from app.models.user import User
+
+router = APIRouter(prefix="/leaves", tags=["Leave Management"])
+
+
+def get_employee_for_user(db: Session, user):
+    employee = db.query(Employee).filter(
+        Employee.user_id == user.id
+    ).first()
+
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee record not found")
+
+    return employee
+
+
+def get_employee_or_404(db: Session, employee_id: int):
+    employee = db.query(Employee).filter(
+        Employee.id == employee_id
+    ).first()
+
+    if not employee:
+        raise HTTPException(status_code=404, detail="Employee not found")
+
+    return employee
+
+
+def clean_leave_type(value: str) -> str:
+    value = value.strip().lower()
+    if not value or len(value) > 30:
+        raise HTTPException(
+            status_code=422,
+            detail="Leave type must contain 1 to 30 characters",
+        )
+    return value
+
+
+def leave_days(start_date: date, end_date: date) -> int:
+    if end_date < start_date:
+        raise HTTPException(
+            status_code=422,
+            detail="End date cannot be before start date",
+        )
+    # Inclusive calendar days; weekends and holidays are included.
+    return (end_date - start_date).days + 1
+
+
+@router.post(
+    "/",
+    response_model=LeaveResponse,
+    status_code=status.HTTP_201_CREATED,
+)
+def apply_for_leave(
+    data: LeaveCreate,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    if data.end_date < data.start_date:
+        raise HTTPException(
+            status_code=422,
+            detail="End date cannot be before start date",
+        )
+
+    if current_user.role == "employee":
+        employee = get_employee_for_user(db, current_user)
+
+        if data.employee_id != employee.id:
+            raise HTTPException(
+                status_code=403,
+                detail="You can only apply for your own leave",
+            )
+    else:
+        employee = get_employee_or_404(db, data.employee_id)
+
+    if data.start_date < date.today():
+        raise HTTPException(
+            status_code=400,
+            detail="Leave cannot start in the past",
+        )
+
+    leave_type = clean_leave_type(data.leave_type)
+
+    leave = Leave(
+        employee_id=employee.id,
+        start_date=data.start_date,
+        end_date=data.end_date,
+        leave_type=leave_type,
+        reason=data.reason,
+        status="pending",
+    )
+
+    db.add(leave)
+    db.commit()
+    db.refresh(leave)
+    return leave
+
+
+@router.get("/", response_model=list[LeaveResponse])
+def list_leaves(
+    employee_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    query = db.query(Leave)
+
+    if current_user.role == "employee":
+        employee = get_employee_for_user(db, current_user)
+        query = query.filter(Leave.employee_id == employee.id)
+    elif employee_id is not None:
+        query = query.filter(Leave.employee_id == employee_id)
+
+    return query.order_by(Leave.created_at.desc()).all()
+
+
+@router.put("/balances/{employee_id}/{leave_type}")
+def set_leave_balance(
+    employee_id: int,
+    leave_type: str,
+    allocated_days: int = Query(..., ge=0, le=365),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "hr")),
+):
+    """Set an employee's total allocation for a leave type."""
+    get_employee_or_404(db, employee_id)
+    leave_type = clean_leave_type(leave_type)
+
+    balance = db.query(LeaveBalance).filter(
+        LeaveBalance.employee_id == employee_id,
+        LeaveBalance.leave_type == leave_type,
+    ).with_for_update().first()
+
+    if balance:
+        if Decimal(str(allocated_days)) < Decimal(str(balance.used_days or 0)):
+            raise HTTPException(
+                status_code=409,
+                detail="Allocation cannot be less than leave already used",
+            )
+        balance.allocated_days = allocated_days
+    else:
+        balance = LeaveBalance(
+            employee_id=employee_id,
+            leave_type=leave_type,
+            allocated_days=allocated_days,
+            used_days=0,
+        )
+        db.add(balance)
+
+    db.commit()
+    db.refresh(balance)
+
+    return {
+        "employee_id": balance.employee_id,
+        "leave_type": balance.leave_type,
+        "allocated_days": float(balance.allocated_days),
+        "used_days": float(balance.used_days),
+        "remaining_days": float(balance.allocated_days - balance.used_days),
+    }
+
+
+@router.get("/balances")
+def get_leave_balances(
+    employee_id: int | None = None,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Employees can see their own balances; Admin/HR can filter by employee."""
+    query = db.query(LeaveBalance)
+
+    if current_user.role == "employee":
+        employee = get_employee_for_user(db, current_user)
+        query = query.filter(LeaveBalance.employee_id == employee.id)
+    elif employee_id is not None:
+        query = query.filter(LeaveBalance.employee_id == employee_id)
+
+    balances = query.order_by(
+        LeaveBalance.employee_id,
+        LeaveBalance.leave_type,
+    ).all()
+
+    return [
+        {
+            "employee_id": item.employee_id,
+            "leave_type": item.leave_type,
+            "allocated_days": float(item.allocated_days),
+            "used_days": float(item.used_days),
+            "remaining_days": float(item.allocated_days - item.used_days),
+        }
+        for item in balances
+    ]
+
+
+@router.get("/{leave_id}/ledger")
+def get_leave_ledger(
+    leave_id: int,
+    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
+):
+    """Show the paid days and LOP days recorded for an approved leave."""
+    leave = db.query(Leave).filter(Leave.id == leave_id).first()
+
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+
+    if current_user.role == "employee":
+        employee = get_employee_for_user(db, current_user)
+        if leave.employee_id != employee.id:
+            raise HTTPException(status_code=403, detail="Access denied")
+
+    ledger = db.query(LeaveLedger).filter(
+        LeaveLedger.leave_id == leave_id
+    ).first()
+
+    if not ledger:
+        return {
+            "leave_id": leave_id,
+            "status": leave.status,
+            "paid_days": 0,
+            "lop_days": 0,
+            "message": "No leave deduction recorded",
+        }
+
+    return {
+        "leave_id": ledger.leave_id,
+        "status": leave.status,
+        "paid_days": float(ledger.paid_days),
+        "lop_days": float(ledger.lop_days),
+    }
+
+
+@router.patch("/{leave_id}/review", response_model=LeaveResponse)
+def review_leave(
+    leave_id: int,
+    data: LeaveReview,
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "hr")),
+):
+    leave = db.query(Leave).filter(
+        Leave.id == leave_id
+    ).with_for_update().first()
+
+    if not leave:
+        raise HTTPException(status_code=404, detail="Leave request not found")
+
+    if leave.status != "pending":
+        raise HTTPException(
+            status_code=409,
+            detail="This leave request has already been reviewed",
+        )
+
+    if data.status not in {"approved", "rejected"}:
+        raise HTTPException(
+            status_code=422,
+            detail="Status must be approved or rejected",
+        )
+
+    try:
+        if data.status == "approved":
+            if db.query(LeaveLedger).filter(
+                LeaveLedger.leave_id == leave.id
+            ).first():
+                raise HTTPException(
+                    status_code=409,
+                    detail="A leave deduction has already been recorded",
+                )
+
+            total_days = leave_days(leave.start_date, leave.end_date)
+
+            balance = db.query(LeaveBalance).filter(
+                LeaveBalance.employee_id == leave.employee_id,
+                LeaveBalance.leave_type == leave.leave_type.lower(),
+            ).with_for_update().first()
+
+            available_days = Decimal("0")
+            if balance:
+                available_days = max(
+                    Decimal("0"),
+                    Decimal(str(balance.allocated_days))
+                    - Decimal(str(balance.used_days)),
+                )
+
+            paid_days = min(Decimal(total_days), available_days)
+            lop_days = Decimal(total_days) - paid_days
+
+            if balance:
+                balance.used_days = (
+                    Decimal(str(balance.used_days)) + paid_days
+                )
+
+            db.add(
+                LeaveLedger(
+                    leave_id=leave.id,
+                    paid_days=paid_days.quantize(
+                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                    ),
+                    lop_days=lop_days.quantize(
+                        Decimal("0.01"), rounding=ROUND_HALF_UP
+                    ),
+                )
+            )
+
+        leave.status = data.status
+        leave.reviewed_by = current_user.id
+        leave.reviewed_at = datetime.now()
+
+        log_action(
+            db=db,
+            user_id=current_user.id,
+            action=f"leave.{leave.status}",
+            entity_type="leave",
+            entity_id=leave.id,
+            details={
+                "employee_id": leave.employee_id,
+                "leave_type": leave.leave_type,
+                "start_date": str(leave.start_date),
+                "end_date": str(leave.end_date),
+            },
+        )
+
+        db.commit()
+        db.refresh(leave)
+
+        # Notify the employee after the database transaction succeeds.
+        try:
+            employee = get_employee_or_404(db, leave.employee_id)
+            user = db.query(User).filter(
+                User.id == employee.user_id
+            ).first()
+
+            if user and user.email:
+                send_email(
+                    to_email=user.email,
+                    subject=f"Leave request {leave.status}",
+                    body=(
+                        f"Hello {user.full_name},\n\n"
+                        f"Your leave request has been {leave.status}.\n"
+                        f"Leave type: {leave.leave_type}\n"
+                        f"From: {leave.start_date}\n"
+                        f"To: {leave.end_date}\n\n"
+                        "Please contact HR if you have questions.\n"
+                        "HRMS"
+                    ),
+                )
+        except Exception as exc:
+            print(f"Leave notification failed: {type(exc).__name__}")
+            # Notification errors must not undo a completed leave review.
+            print(f"Leave notification failed: {type(exc).__name__}")
+
+        return leave
+
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception:
+        db.rollback()
+        raise

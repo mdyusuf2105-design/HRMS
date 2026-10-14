@@ -1,0 +1,1235 @@
+{
+  "info": {
+    "name": "HRMS API Collection",
+    "description": "Generated from the project's FastAPI OpenAPI specification. Replace example request values before sending.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Register User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/auth/register",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "register"
+          ]
+        },
+        "description": "Register User",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Login User",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "login"
+          ]
+        },
+        "description": "Login User"
+      },
+      "response": []
+    },
+    {
+      "name": "Get My Profile",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "auth",
+            "me"
+          ]
+        },
+        "description": "Get My Profile",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Employees",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/employees/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees"
+          ]
+        },
+        "description": "List Employees",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Employee",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/employees/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees"
+          ]
+        },
+        "description": "Create Employee",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Employee",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/employees/{employee_id}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees",
+            "{employee_id}"
+          ]
+        },
+        "description": "Get Employee",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Update Employee",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/employees/{employee_id}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees",
+            "{employee_id}"
+          ]
+        },
+        "description": "Update Employee",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Deactivate Employee",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/employees/{employee_id}/deactivate",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees",
+            "{employee_id}",
+            "deactivate"
+          ]
+        },
+        "description": "Deactivate Employee",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Upload Employee Document",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/employees/{employee_id}/documents",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees",
+            "{employee_id}",
+            "documents"
+          ]
+        },
+        "description": "Upload Employee Document",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Employee Documents",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/employees/{employee_id}/documents",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees",
+            "{employee_id}",
+            "documents"
+          ]
+        },
+        "description": "List Employee Documents",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Download Employee Document",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/employees/{employee_id}/documents/{document_id}/download",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employees",
+            "{employee_id}",
+            "documents",
+            "{document_id}",
+            "download"
+          ]
+        },
+        "description": "Download Employee Document",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Check In",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/attendance/check-in",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "attendance",
+            "check-in"
+          ]
+        },
+        "description": "Check In",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Check Out",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/attendance/{attendance_id}/check-out",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "attendance",
+            "{attendance_id}",
+            "check-out"
+          ]
+        },
+        "description": "Check Out",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Attendance",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/attendance/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "attendance"
+          ],
+          "query": [
+            {
+              "key": "employee_id",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "attendance_date",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "List Attendance",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Monthly Attendance Summary",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/attendance/monthly-summary",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "attendance",
+            "monthly-summary"
+          ],
+          "query": [
+            {
+              "key": "year",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "month",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "employee_id",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "Monthly Attendance Summary",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Override Attendance",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/attendance/{attendance_id}/override",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "attendance",
+            "{attendance_id}",
+            "override"
+          ],
+          "query": [
+            {
+              "key": "status_value",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "check_in",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "check_out",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "Override Attendance",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Apply For Leave",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/leaves/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "leaves"
+          ]
+        },
+        "description": "Apply For Leave",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Leaves",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/leaves/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "leaves"
+          ],
+          "query": [
+            {
+              "key": "employee_id",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "List Leaves",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Set Leave Balance",
+      "request": {
+        "method": "PUT",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/leaves/balances/{employee_id}/{leave_type}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "leaves",
+            "balances",
+            "{employee_id}",
+            "{leave_type}"
+          ],
+          "query": [
+            {
+              "key": "allocated_days",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "Set Leave Balance",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Leave Balances",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/leaves/balances",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "leaves",
+            "balances"
+          ],
+          "query": [
+            {
+              "key": "employee_id",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "Get Leave Balances",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Leave Ledger",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/leaves/{leave_id}/ledger",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "leaves",
+            "{leave_id}",
+            "ledger"
+          ]
+        },
+        "description": "Get Leave Ledger",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Review Leave",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/leaves/{leave_id}/review",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "leaves",
+            "{leave_id}",
+            "review"
+          ]
+        },
+        "description": "Review Leave",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Create Payroll",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/payroll/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "payroll"
+          ]
+        },
+        "description": "Create Payroll",
+        "body": {
+          "mode": "raw",
+          "raw": "{}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Payroll",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/payroll/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "payroll"
+          ],
+          "query": [
+            {
+              "key": "employee_id",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "pay_period",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "List Payroll",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Get Payroll",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/payroll/{payroll_id}",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "payroll",
+            "{payroll_id}"
+          ]
+        },
+        "description": "Get Payroll",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Lock Payroll",
+      "request": {
+        "method": "PATCH",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/payroll/{payroll_id}/lock",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "payroll",
+            "{payroll_id}",
+            "lock"
+          ]
+        },
+        "description": "Lock Payroll",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Download Salary Slip",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/payroll/{payroll_id}/salary-slip",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "payroll",
+            "{payroll_id}",
+            "salary-slip"
+          ]
+        },
+        "description": "Download Salary Slip",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Attendance Report",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/reports/attendance.csv",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "attendance.csv"
+          ],
+          "query": [
+            {
+              "key": "start_date",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "end_date",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "department",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "Attendance Report",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Payroll Report",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/reports/payroll.csv",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "reports",
+            "payroll.csv"
+          ],
+          "query": [
+            {
+              "key": "pay_period",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "department",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "Payroll Report",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "List Audit Logs",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/audit-logs/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "audit-logs"
+          ],
+          "query": [
+            {
+              "key": "limit",
+              "value": "",
+              "description": ""
+            },
+            {
+              "key": "offset",
+              "value": "",
+              "description": ""
+            }
+          ]
+        },
+        "description": "List Audit Logs",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Home",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": []
+        },
+        "description": "Home",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Database Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/health/db",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "health",
+            "db"
+          ]
+        },
+        "description": "Database Health",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Admin Test",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/admin/test",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "admin",
+            "test"
+          ]
+        },
+        "description": "Admin Test",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Hr Test",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/hr/test",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "hr",
+            "test"
+          ]
+        },
+        "description": "Hr Test",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    },
+    {
+      "name": "Employee Test",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{baseUrl}}/employee/test",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "employee",
+            "test"
+          ]
+        },
+        "description": "Employee Test",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "response": []
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://127.0.0.1:8000"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ]
+}
