@@ -340,6 +340,32 @@ def review_leave(
         db.commit()
         db.refresh(leave)
 
+        # leave.in_app_notification: send an in-app notification after commit.
+        try:
+            from app.models.notification import Notification
+            from app.models.notification_preference import NotificationPreference
+
+            employee = get_employee_or_404(db, leave.employee_id)
+            preference = db.query(NotificationPreference).filter(
+                NotificationPreference.user_id == employee.user_id,
+                NotificationPreference.notification_type == "leave",
+            ).first()
+
+            if preference is None or preference.is_enabled:
+                db.add(Notification(
+                    user_id=employee.user_id,
+                    title=f"Leave request {leave.status}",
+                    message=(
+                        f"Your {leave.leave_type} leave request from "
+                        f"{leave.start_date} to {leave.end_date} "
+                        f"has been {leave.status}."
+                    ),
+                    notification_type="leave",
+                ))
+                db.commit()
+        except Exception:
+            db.rollback()
+
         # Notify the employee after the database transaction succeeds.
         try:
             employee = get_employee_or_404(db, leave.employee_id)

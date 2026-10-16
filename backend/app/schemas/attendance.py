@@ -15,6 +15,8 @@ class AttendanceResponse(BaseModel):
     attendance_date: date
     check_in: datetime | None
     check_out: datetime | None
+    early_checkout_minutes: int | None = 0
+    overtime_minutes: int | None = 0
     status: Literal["present", "absent", "late", "half_day"]
 
     model_config = ConfigDict(from_attributes=True)

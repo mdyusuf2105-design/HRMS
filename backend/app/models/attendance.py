@@ -23,6 +23,9 @@ class Attendance(Base):
     check_in = Column(DateTime, nullable=True)
     check_out = Column(DateTime, nullable=True)
 
+    early_checkout_minutes = Column(Integer, nullable=True, default=0)
+    overtime_minutes = Column(Integer, nullable=True, default=0)
+
     status = Column(
         String(20),
         nullable=False,

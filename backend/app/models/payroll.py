@@ -39,6 +39,8 @@ class Payroll(Base):
     allowances = Column(Numeric(12, 2), nullable=False, default=0)
     deductions = Column(Numeric(12, 2), nullable=False, default=0)
     net_salary = Column(Numeric(12, 2), nullable=False)
+    bonus = Column(Numeric(12, 2), nullable=False, default=0, server_default="0")
+    overtime_pay = Column(Numeric(12, 2), nullable=False, default=0, server_default="0")
 
     is_locked = Column(
         Boolean,

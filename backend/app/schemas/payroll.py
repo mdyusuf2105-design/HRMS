@@ -10,6 +10,8 @@ class PayrollCreate(BaseModel):
     basic_salary: Decimal = Field(ge=0, max_digits=12, decimal_places=2)
     allowances: Decimal = Field(default=Decimal("0.00"), ge=0, max_digits=12, decimal_places=2)
     deductions: Decimal = Field(default=Decimal("0.00"), ge=0, max_digits=12, decimal_places=2)
+    bonus: Decimal = Field(default=Decimal("0.00"), ge=0, max_digits=12, decimal_places=2)
+    overtime_rate_per_hour: Decimal = Field(default=Decimal("0.00"), ge=0, max_digits=12, decimal_places=2)
 
 
 class PayrollResponse(BaseModel):
@@ -20,6 +22,8 @@ class PayrollResponse(BaseModel):
     allowances: Decimal
     deductions: Decimal
     net_salary: Decimal
+    bonus: Decimal = Decimal("0.00")
+    overtime_pay: Decimal = Decimal("0.00")
     created_by: int
     created_at: datetime
 

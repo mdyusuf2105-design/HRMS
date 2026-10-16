@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   Users,
@@ -21,14 +21,18 @@ import {
   X,
 } from "lucide-react";
 import api from "../api/client";
+import WorkforceManagement from "./WorkforceManagement";
+import CalendarView from "./CalendarView";
 
 const navigation = [
   { label: "Dashboard", icon: LayoutDashboard },
+  { label: "Calendar", icon: CalendarDays },
   { label: "Employees", icon: Users },
   { label: "Attendance", icon: CalendarDays },
   { label: "Leave Management", icon: ClipboardCheck },
   { label: "Payroll", icon: Wallet },
   { label: "Reports", icon: FileDown },
+  { label: "Workforce Management", icon: CalendarDays },
 ];
 
 const demoLeaves = [
@@ -232,6 +236,10 @@ function EmployeeTable({ employees, onSelect }) {
 export default function Dashboard({ user, onLogout }) {
   const [activePage, setActivePage] = useState("Dashboard");
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState([]);
+  const [unreadNotificationCount, setUnreadNotificationCount] = useState(0);
+  const [notificationsLoading, setNotificationsLoading] = useState(false);
+  const [notificationsError, setNotificationsError] = useState("");
   const [search, setSearch] = useState("");
   const [employees, setEmployees] = useState([]);
   const [employeesLoaded, setEmployeesLoaded] = useState(false);
@@ -258,6 +266,20 @@ export default function Dashboard({ user, onLogout }) {
   const [leavesLoaded, setLeavesLoaded] = useState(false);
   const [payrollLoaded, setPayrollLoaded] = useState(false);
 
+  const [payrollPreviewForm, setPayrollPreviewForm] = useState({
+    employee_id: "",
+    year: String(new Date().getFullYear()),
+    month: String(new Date().getMonth() + 1),
+    basic_salary: "",
+    allowances: "0",
+    deductions: "0",
+    region: "",
+  });
+  const [payrollPreview, setPayrollPreview] = useState(null);
+  const [payrollPreviewLoading, setPayrollPreviewLoading] = useState(false);
+  const [payrollPreviewError, setPayrollPreviewError] = useState("");
+
+
   const [showEmployeeForm, setShowEmployeeForm] = useState(false);
   const [employeeSaving, setEmployeeSaving] = useState(false);
   const [employeeFormError, setEmployeeFormError] = useState("");
@@ -278,6 +300,75 @@ export default function Dashboard({ user, onLogout }) {
     user?.email ||
     user?.username ||
     "HRMS User";
+
+  const loadNotifications = useCallback(async () => {
+    setNotificationsLoading(true);
+    setNotificationsError("");
+
+    try {
+      const [listResponse, countResponse] = await Promise.all([
+        api.get("/notifications/", { params: { limit: 50 } }),
+        api.get("/notifications/unread-count"),
+      ]);
+
+      setNotifications(Array.isArray(listResponse.data) ? listResponse.data : []);
+      setUnreadNotificationCount(
+        Number(countResponse.data?.unread_count || 0)
+      );
+    } catch (error) {
+      setNotificationsError(
+        error.response?.data?.detail || "Could not load notifications."
+      );
+    } finally {
+      setNotificationsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadNotifications();
+  }, [loadNotifications]);
+
+  useEffect(() => {
+    const role = String(user?.role || "").toLowerCase();
+    const isAdminOrHR = role === "admin" || role === "hr";
+
+    if (activePage === "Payroll" && isAdminOrHR && !employeesLoaded && !employeesLoading) {
+      loadEmployees({ navigate: false });
+    }
+  }, [activePage, user?.role, employeesLoaded, employeesLoading]);
+
+  async function markNotificationAsRead(notification) {
+    if (notification.is_read) return;
+
+    try {
+      await api.patch(`/notifications/${notification.id}/read`);
+      setNotifications((current) =>
+        current.map((item) =>
+          item.id === notification.id ? { ...item, is_read: true } : item
+        )
+      );
+      setUnreadNotificationCount((count) => Math.max(0, count - 1));
+    } catch (error) {
+      setNotificationsError(
+        error.response?.data?.detail || "Could not mark notification as read."
+      );
+    }
+  }
+
+  async function markAllNotificationsAsRead() {
+    try {
+      await api.patch("/notifications/read-all");
+      setNotifications((current) =>
+        current.map((item) => ({ ...item, is_read: true }))
+      );
+      setUnreadNotificationCount(0);
+    } catch (error) {
+      setNotificationsError(
+        error.response?.data?.detail || "Could not mark notifications as read."
+      );
+    }
+  }
+
 
   const filteredEmployees = useMemo(() => {
     const query = search.toLowerCase().trim();
@@ -546,8 +637,8 @@ export default function Dashboard({ user, onLogout }) {
     );
   }
 
-  async function loadEmployees() {
-    setActivePage("Employees");
+  async function loadEmployees({ navigate = true } = {}) {
+    if (navigate) setActivePage("Employees");
     setLoadError("");
     setEmployeesLoading(true);
 
@@ -720,6 +811,16 @@ export default function Dashboard({ user, onLogout }) {
 
     if (page === "Employees") {
       if (isAdminOrHR && !employeesLoaded) loadEmployees();
+      return;
+    }
+
+    if (page === "Payroll") {
+      if (isAdminOrHR && !employeesLoaded) {
+        loadEmployees({ navigate: false }).catch((error) => {
+          console.error("Unable to load employees for payroll preview:", error);
+        });
+      }
+      if (!payrollLoaded) loadPayroll();
       return;
     }
 
@@ -1956,6 +2057,72 @@ export default function Dashboard({ user, onLogout }) {
 
 
   
+  async function handlePayrollPreview(event) {
+    event.preventDefault();
+    setPayrollPreviewLoading(true);
+    setPayrollPreviewError("");
+    setPayrollPreview(null);
+
+    try {
+      const employeeId = Number(payrollPreviewForm.employee_id);
+      const year = Number(payrollPreviewForm.year);
+      const month = Number(payrollPreviewForm.month);
+      const basicSalary = Number(payrollPreviewForm.basic_salary);
+      const allowances = Number(payrollPreviewForm.allowances || 0);
+      const deductions = Number(payrollPreviewForm.deductions || 0);
+
+      if (!employeeId || !Number.isInteger(employeeId)) {
+        throw new Error("Please select an employee.");
+      }
+
+      if (!Number.isInteger(year) || year < 1) {
+        throw new Error("Enter a valid year.");
+      }
+
+      if (!Number.isInteger(month) || month < 1 || month > 12) {
+        throw new Error("Month must be between 1 and 12.");
+      }
+
+      if (
+        !Number.isFinite(basicSalary) ||
+        !Number.isFinite(allowances) ||
+        !Number.isFinite(deductions) ||
+        basicSalary < 0 ||
+        allowances < 0 ||
+        deductions < 0
+      ) {
+        throw new Error("Salary, allowances, and deductions must be non-negative numbers.");
+      }
+
+      const response = await api.get(
+        `/payroll/preview/${employeeId}`,
+        {
+          params: {
+            year,
+            month,
+            basic_salary: basicSalary,
+            allowances,
+            deductions,
+            ...(payrollPreviewForm.region.trim()
+              ? { region: payrollPreviewForm.region.trim() }
+              : {}),
+          },
+        }
+      );
+
+      setPayrollPreview(response.data);
+    } catch (error) {
+      setPayrollPreviewError(
+        error.message ||
+          (typeof error.response?.data?.detail === "string"
+            ? error.response.data.detail
+            : "Unable to calculate payroll preview.")
+      );
+    } finally {
+      setPayrollPreviewLoading(false);
+    }
+  }
+
   function renderPayroll() {
     const currentMonth = new Date().toISOString().slice(0, 7);
 
@@ -2046,6 +2213,230 @@ export default function Dashboard({ user, onLogout }) {
                 variant="purple"
               />
             </section>
+
+            {String(user?.role || "").toLowerCase() !== "employee" && (
+              <section className="panel page-panel payroll-preview-panel">
+                <SectionHeading
+                  title="Payroll Preview"
+                  subtitle="Estimate monthly salary without creating or changing a payroll record."
+                />
+
+                <form onSubmit={handlePayrollPreview} className="payroll-preview-form">
+                  <label className="form-field">
+                    Employee
+                    <select
+                      required
+                      value={payrollPreviewForm.employee_id}
+                      onChange={(event) =>
+                        setPayrollPreviewForm((previous) => ({
+                          ...previous,
+                          employee_id: event.target.value,
+                        }))
+                      }
+                    >
+                      <option value="">Select an employee</option>
+                      {employees.map((employee) => (
+                        <option key={employee.id} value={employee.id}>
+                          {getEmployeeName(employee)} (#{employee.id})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
+                    Year
+                    <input
+                      type="number"
+                      min="1"
+                      required
+                      value={payrollPreviewForm.year}
+                      onChange={(event) =>
+                        setPayrollPreviewForm((previous) => ({
+                          ...previous,
+                          year: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    Month
+                    <select
+                      required
+                      value={payrollPreviewForm.month}
+                      onChange={(event) =>
+                        setPayrollPreviewForm((previous) => ({
+                          ...previous,
+                          month: event.target.value,
+                        }))
+                      }
+                    >
+                      {Array.from({ length: 12 }, (_, index) => (
+                        <option key={index + 1} value={index + 1}>
+                          {new Date(2000, index, 1).toLocaleString("en", {
+                            month: "long",
+                          })}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+
+                  <label className="form-field">
+                    Basic salary (₹)
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      required
+                      value={payrollPreviewForm.basic_salary}
+                      onChange={(event) =>
+                        setPayrollPreviewForm((previous) => ({
+                          ...previous,
+                          basic_salary: event.target.value,
+                        }))
+                      }
+                      placeholder="30000"
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    Allowances (₹)
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={payrollPreviewForm.allowances}
+                      onChange={(event) =>
+                        setPayrollPreviewForm((previous) => ({
+                          ...previous,
+                          allowances: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    Manual deductions (₹)
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      value={payrollPreviewForm.deductions}
+                      onChange={(event) =>
+                        setPayrollPreviewForm((previous) => ({
+                          ...previous,
+                          deductions: event.target.value,
+                        }))
+                      }
+                    />
+                  </label>
+
+                  <label className="form-field">
+                    Region (optional)
+                    <input
+                      type="text"
+                      value={payrollPreviewForm.region}
+                      onChange={(event) =>
+                        setPayrollPreviewForm((previous) => ({
+                          ...previous,
+                          region: event.target.value,
+                        }))
+                      }
+                      placeholder="Tamil Nadu"
+                    />
+                  </label>
+
+                  <div className="payroll-preview-actions">
+                    <button
+                      type="submit"
+                      className="button button-primary"
+                      disabled={payrollPreviewLoading || employees.length === 0}
+                    >
+                      {payrollPreviewLoading ? "Calculating..." : "Calculate preview"}
+                    </button>
+                    {employees.length === 0 && (
+                      <span className="report-muted">
+                        Load employee records before calculating a preview.
+                      </span>
+                    )}
+                  </div>
+                </form>
+
+                {payrollPreviewError && (
+                  <div className="dashboard-error" role="alert">
+                    {payrollPreviewError}
+                  </div>
+                )}
+
+                {payrollPreview && (
+                  <div className="payroll-preview-results">
+                    <div className="payroll-preview-result-header">
+                      <div>
+                        <span className="eyebrow">ESTIMATED TAKE-HOME PAY</span>
+                        <h2>
+                          {formatCurrency(Number(payrollPreview.estimated_net_salary))}
+                        </h2>
+                        <p>
+                          {formatPeriod(payrollPreview.pay_period)} · Employee #
+                          {payrollPreview.employee_id}
+                        </p>
+                      </div>
+                      <span className="status-badge status-active">
+                        Preview only
+                      </span>
+                    </div>
+
+                    <div className="payroll-preview-breakdown">
+                      <div>
+                        <span>Working days</span>
+                        <strong>{payrollPreview.working_days?.working_days ?? 0}</strong>
+                      </div>
+                      <div>
+                        <span>Attendance records</span>
+                        <strong>{payrollPreview.attendance?.total_records ?? 0}</strong>
+                      </div>
+                      <div>
+                        <span>Approved leave LOP days</span>
+                        <strong>{payrollPreview.approved_leave_lop_days}</strong>
+                      </div>
+                      <div>
+                        <span>Basic salary</span>
+                        <strong>{formatCurrency(Number(payrollPreview.basic_salary))}</strong>
+                      </div>
+                      <div>
+                        <span>Allowances</span>
+                        <strong>{formatCurrency(Number(payrollPreview.allowances))}</strong>
+                      </div>
+                      <div>
+                        <span>Manual deductions</span>
+                        <strong>{formatCurrency(Number(payrollPreview.manual_deductions))}</strong>
+                      </div>
+                      <div>
+                        <span>Estimated LOP deduction</span>
+                        <strong>{formatCurrency(Number(payrollPreview.estimated_lop_deduction))}</strong>
+                      </div>
+                      <div>
+                        <span>Total deductions</span>
+                        <strong>{formatCurrency(Number(payrollPreview.total_deductions_including_lop))}</strong>
+                      </div>
+                    </div>
+
+                    {payrollPreview.payroll_warnings?.map((warning, index) => (
+                      <div className="dashboard-error" key={index}>
+                        {warning}
+                      </div>
+                    ))}
+
+                    <p className="payroll-preview-disclaimer">
+                      {payrollPreview.note}
+                    </p>
+                    <p className="report-muted">
+                      No payroll record was created or changed by this preview.
+                    </p>
+                  </div>
+                )}
+              </section>
+            )}
 
             <section className="panel page-panel">
               <SectionHeading
@@ -2200,11 +2591,17 @@ export default function Dashboard({ user, onLogout }) {
                 aria-label="Notifications"
                 title="Notifications"
                 aria-expanded={showNotifications}
-                onClick={() => setShowNotifications((current) => !current)}
+                onClick={() => {
+                  const nextOpen = !showNotifications;
+                  setShowNotifications(nextOpen);
+                  if (nextOpen) loadNotifications();
+                }}
               >
                 <Bell size={18} strokeWidth={1.8} />
-                {leavesLoaded && leaves.filter((leave) => leave.status?.toLowerCase() === "pending").length > 0 && (
-                  <span className="notification-dot" aria-hidden="true" />
+                {unreadNotificationCount > 0 && (
+                  <span className="notification-dot" aria-label={`${unreadNotificationCount} unread notifications`}>
+                    {unreadNotificationCount > 99 ? "99+" : unreadNotificationCount}
+                  </span>
                 )}
               </button>
 
@@ -2212,16 +2609,73 @@ export default function Dashboard({ user, onLogout }) {
                 <section className="notification-panel" aria-label="Notifications panel">
                   <div className="notification-panel-heading">
                     <strong>Notifications</strong>
-                    <button
-                      type="button"
-                      className="icon-button"
+                    <div className="notification-heading-actions">
+                      {unreadNotificationCount > 0 && (
+                        <button
+                          type="button"
+                          className="notification-view-all"
+                          onClick={markAllNotificationsAsRead}
+                        >
+                          Mark all read
+                        </button>
+                      )}
+                      <button
+                        type="button"
+                        className="icon-button"
                       aria-label="Close notifications"
                       onClick={() => setShowNotifications(false)}
                     >
                       <X size={15} />
-                    </button>
+                      </button>
+                    </div>
                   </div>
 
+                  {notificationsError && (
+                    <div className="notification-message">
+                      <p>{notificationsError}</p>
+                      <button
+                        type="button"
+                        className="button button-secondary"
+                        onClick={loadNotifications}
+                      >
+                        Retry
+                      </button>
+                    </div>
+                  )}
+
+                  <div className="notification-section-label">In-app notifications</div>
+                  {notificationsLoading ? (
+                    <p className="notification-message">Loading notifications...</p>
+                  ) : notifications.length === 0 ? (
+                    <p className="notification-message">No in-app notifications yet.</p>
+                  ) : (
+                    <div className="notification-list">
+                      {notifications.map((notification) => (
+                        <button
+                          type="button"
+                          className={`notification-item notification-record ${notification.is_read ? "is-read" : "is-unread"}`}
+                          key={notification.id}
+                          onClick={() => markNotificationAsRead(notification)}
+                        >
+                          <span className="notification-item-icon">
+                            <Bell size={16} />
+                          </span>
+                          <span className="notification-record-content">
+                            <strong>{notification.title}</strong>
+                            <span>{notification.message}</span>
+                            <small>
+                              {notification.created_at
+                                ? new Date(notification.created_at).toLocaleString()
+                                : ""}
+                              {notification.is_read ? " · Read" : " · Unread"}
+                            </small>
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="notification-section-label">Leave requests</div>
                   {!leavesLoaded && leavesLoading ? (
                     <p className="notification-message">Loading leave requests...</p>
                   ) : leavesError ? (
@@ -2285,11 +2739,13 @@ export default function Dashboard({ user, onLogout }) {
 
         <div className="page-content">
           {activePage === "Dashboard" && renderDashboard()}
+          {activePage === "Calendar" && <CalendarView />}
           {activePage === "Employees" && renderEmployees()}
           {activePage === "Attendance" && renderAttendance()}
           {activePage === "Leave Management" && renderLeaveManagement()}
           {activePage === "Payroll" && renderPayroll()}
           {activePage === "Reports" && renderReports()}
+          {activePage === "Workforce Management" && <WorkforceManagement user={user} />}
         </div>
 
         <footer className="app-footer">

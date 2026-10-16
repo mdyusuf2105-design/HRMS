@@ -11,6 +11,7 @@ from app.models.attendance import Attendance
 from app.models.employee import Employee
 from app.models.payroll import Payroll
 from app.models.user import User
+from app.models.shift import EmployeeShift, Shift, DepartmentShift
 from app.routers.auth import require_roles
 
 router = APIRouter(
@@ -138,6 +139,125 @@ def payroll_report(
             "payroll_id", "employee_id", "employee_name", "department",
             "pay_period", "basic_salary", "allowances", "deductions",
             "net_salary", "is_locked",
+        ],
+        rows,
+    )
+
+
+@router.get("/attendance/shift-wise.csv")
+def shift_wise_attendance_report(
+    start_date: date | None = None,
+    end_date: date | None = None,
+    department: str | None = Query(default=None, max_length=100),
+    db: Session = Depends(get_db),
+    current_user=Depends(require_roles("admin", "hr")),
+):
+    from fastapi import HTTPException
+    from sqlalchemy import or_
+
+    if start_date and end_date and end_date < start_date:
+        raise HTTPException(
+            status_code=422,
+            detail="end_date cannot be before start_date",
+        )
+
+    query = (
+        db.query(Attendance, Employee, User)
+        .join(Employee, Attendance.employee_id == Employee.id)
+        .join(User, Employee.user_id == User.id)
+    )
+
+    if start_date:
+        query = query.filter(Attendance.attendance_date >= start_date)
+    if end_date:
+        query = query.filter(Attendance.attendance_date <= end_date)
+    if department:
+        query = query.filter(Employee.department == department)
+
+    records = query.order_by(
+        Attendance.attendance_date,
+        Employee.id,
+    ).all()
+
+    rows = []
+
+    for attendance, employee, user in records:
+        day = attendance.attendance_date
+        shift_name = "Unassigned"
+
+        # Prefer the employee-specific shift effective on this date.
+        assignment = db.query(EmployeeShift).filter(
+            EmployeeShift.employee_id == employee.id,
+            EmployeeShift.effective_from.isnot(None),
+            EmployeeShift.effective_from <= day,
+            or_(
+                EmployeeShift.effective_to.is_(None),
+                EmployeeShift.effective_to >= day,
+            ),
+        ).order_by(
+            EmployeeShift.effective_from.desc(),
+            EmployeeShift.id.desc(),
+        ).first()
+
+        # Fall back to a department-level effective assignment.
+        if assignment is None and employee.department:
+            assignment = db.query(DepartmentShift).filter(
+                DepartmentShift.department == employee.department,
+                DepartmentShift.effective_from <= day,
+                or_(
+                    DepartmentShift.effective_to.is_(None),
+                    DepartmentShift.effective_to >= day,
+                ),
+            ).order_by(
+                DepartmentShift.effective_from.desc(),
+                DepartmentShift.id.desc(),
+            ).first()
+
+        # Preserve support for legacy employee assignments.
+        if assignment is None:
+            assignment = db.query(EmployeeShift).filter(
+                EmployeeShift.employee_id == employee.id,
+                EmployeeShift.effective_from.is_(None),
+            ).order_by(
+                EmployeeShift.assigned_at.desc(),
+                EmployeeShift.id.desc(),
+            ).first()
+
+        if assignment:
+            shift = db.query(Shift).filter(
+                Shift.id == assignment.shift_id
+            ).first()
+            if shift:
+                shift_name = shift.name
+
+        rows.append([
+            attendance.id,
+            employee.id,
+            user.full_name,
+            employee.department,
+            day,
+            shift_name,
+            attendance.check_in,
+            attendance.check_out,
+            attendance.status,
+            attendance.early_checkout_minutes or 0,
+            attendance.overtime_minutes or 0,
+        ])
+
+    return csv_response(
+        "shift_wise_attendance_report.csv",
+        [
+            "attendance_id",
+            "employee_id",
+            "employee_name",
+            "department",
+            "date",
+            "shift_name",
+            "check_in",
+            "check_out",
+            "status",
+            "early_checkout_minutes",
+            "overtime_minutes",
         ],
         rows,
     )
